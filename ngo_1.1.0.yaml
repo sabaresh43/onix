@@ -1,0 +1,165 @@
+openapi: 3.0.0
+info:
+  title: Beckn Protocol Core
+  description: ngo:charging layer 2 config from core yaml
+  version: 1.1.0
+security:
+  - SubscriberAuth: []
+paths:
+  /search:
+    post:
+      tags:
+        - Beckn Provider Platform (BPP)
+        - Beckn Gateway (BG)
+      description: BAP declares the customer's intent to buy/avail products or services
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                context:
+                  allOf:
+                    - $ref: "#/components/schemas/Context"
+                    - properties:
+                        action:
+                          enum:
+                            - search
+                message:
+                  type: object
+                  properties:
+                    intent:
+                      $ref: "#/components/schemas/Intent"
+              required:
+                - context
+                - message
+      responses:
+        default:
+          $ref: "#/paths/~1init/post/responses/default"
+  /on_search:
+    post:
+      tags:
+        - Beckn Application Platform (BAP)
+        - Beckn Gateway (BG)
+      description: BPP sends its catalog in response to a search request.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                context:
+                  allOf:
+                    - $ref: "#/components/schemas/Context"
+                    - properties:
+                        action:
+                          enum:
+                            - on_search
+                      required:
+                        - action
+                message:
+                  type: object
+                  properties:
+                    catalog:
+                      $ref: "#/components/schemas/Catalog"
+                  required:
+                    - catalog
+                error:
+                  $ref: "#/components/schemas/Error"
+              required:
+                - context
+      responses:
+        default:
+          $ref: "#/paths/~1init/post/responses/default"
+components:
+  securitySchemes:
+    SubscriberAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Signature of message body using BAP or BPP subscriber''s signing public key. <br/><br/>Format:<br/><br/><code>Authorization : Signature keyId="{subscriber_id}|{unique_key_id}|{algorithm}",algorithm="ed25519",created="1606970629",expires="1607030629",headers="(created) (expires) digest",signature="Base64(signing string)"</code>'
+  schemas:
+    Context:
+      description: "Every API call in beckn protocol has a context. It provides a high-level overview to the receiver about the nature of the intended transaction. Typically, it is the BAP that sets the transaction context based on the consumer's location and action on their UI. But sometimes, during unsolicited callbacks, the BPP also sets the transaction context but it is usually the same as the context of a previous full-cycle, request-callback interaction between the BAP and the BPP. The context object contains four types of fields. <ol><li>Demographic information about the transaction using fields like `domain`, `country`, and `region`.</li><li>Addressing details like the sending and receiving platform's ID and API URL.</li><li>Interoperability information like the protocol version that implemented by the sender and,</li><li>Transaction details like the method being called at the receiver's endpoint, the transaction_id that represents an end-to-end user session at the BAP, a message ID to pair requests with callbacks, a timestamp to capture sending times, a ttl to specifiy the validity of the request, and a key to encrypt information if necessary.</li></ol> This object must be passed in every interaction between a BAP and a BPP. In HTTP/S implementations, it is not necessary to send the context during the synchronous response. However, in asynchronous protocols, the context must be sent during all interactions,"
+      type: object
+      properties:
+        domain:
+          description: Domain code that is relevant to this transaction context
+          allOf:
+            - $ref: "#/components/schemas/Domain/properties/code"
+        location:
+          description: The location where the transaction is intended to be fulfilled.
+          allOf:
+            - $ref: "#/components/schemas/Location"
+        action:
+          description: The Beckn protocol method being called by the sender and executed at the receiver.
+          type: string
+        version:
+          type: string
+          description: Version of transaction protocol being used by the sender.
+        bap_id:
+          description: Subscriber ID of the BAP
+          allOf:
+            - description: "A globally unique identifier of the platform, Typically it is the fully qualified domain name (FQDN) of the platform."
+              type: string
+        bap_uri:
+          description: Subscriber URL of the BAP for accepting callbacks from BPPs.
+          allOf:
+            - description: The callback URL of the Subscriber. This should necessarily contain the same domain name as set in `subscriber_id``.
+              type: string
+              format: uri
+        bpp_id:
+          description: Subscriber ID of the BPP
+          allOf:
+            - $ref: "#/components/schemas/Context/properties/bap_id/allOf/0"
+        bpp_uri:
+          description: Subscriber URL of the BPP for accepting calls from BAPs.
+          allOf:
+            - $ref: "#/components/schemas/Context/properties/bap_uri/allOf/0"
+        transaction_id:
+          description: "This is a unique value which persists across all API calls from `search` through `confirm`. This is done to indicate an active user session across multiple requests. The BPPs can use this value to push personalized recommendations, and dynamic offerings related to an ongoing transaction despite being unaware of the user active on the BAP."
+          type: string
+          format: uuid
+        message_id:
+          description: "This is a unique value which persists during a request / callback cycle. Since beckn protocol APIs are asynchronous, BAPs need a common value to match an incoming callback from a BPP to an earlier call. This value can also be used to ignore duplicate messages coming from the BPP. It is recommended to generate a fresh message_id for every new interaction. When sending unsolicited callbacks, BPPs must generate a new message_id."
+          type: string
+          format: uuid
+        timestamp:
+          description: Time of request generation in RFC3339 format
+          type: string
+          format: date-time
+    Intent:
+      description: "The intent to buy or avail a product or a service. The BAP can declare the intent of the consumer containing <ul><li>What they want (A product, service, offer)</li><li>Who they want (A seller, service provider, agent etc)</li><li>Where they want it and where they want it from</li><li>When they want it (start and end time of fulfillment</li><li>How they want to pay for it</li></ul><br>This has properties like descriptor,provider,fulfillment,payment,category,offer,item,tags<br>This is typically used by the BAP to send the purpose of the user's search to the BPP. This will be used by the BPP to find products or services it offers that may match the user's intent.<br>For example, in Mobility, the mobility consumer declares a mobility intent. In this case, the mobility consumer declares information that describes various aspects of their journey like,<ul><li>Where would they like to begin their journey (intent.fulfillment.start.location)</li><li>Where would they like to end their journey (intent.fulfillment.end.location)</li><li>When would they like to begin their journey (intent.fulfillment.start.time)</li><li>When would they like to end their journey (intent.fulfillment.end.time)</li><li>Who is the transport service provider they would like to avail services from (intent.provider)</li><li>Who is traveling (This is not recommended in public networks) (intent.fulfillment.customer)</li><li>What kind of fare product would they like to purchase (intent.item)</li><li>What add-on services would they like to avail</li><li>What offers would they like to apply on their booking (intent.offer)</li><li>What category of services would they like to avail (intent.category)</li><li>What additional luggage are they carrying</li><li>How would they like to pay for their journey (intent.payment)</li></ul><br>For example, in health domain, a consumer declares the intent for a lab booking the describes various aspects of their booking like,<ul><li>Where would they like to get their scan/test done (intent.fulfillment.start.location)</li><li>When would they like to get their scan/test done (intent.fulfillment.start.time)</li><li>When would they like to get the results of their test/scan (intent.fulfillment.end.time)</li><li>Who is the service provider they would like to avail services from (intent.provider)</li><li>Who is getting the test/scan (intent.fulfillment.customer)</li><li>What kind of test/scan would they like to purchase (intent.item)</li><li>What category of services would they like to avail (intent.category)</li><li>How would they like to pay for their journey (intent.payment)</li></ul>"
+      type: object
+      properties:
+        provider:
+          description: The provider from which the customer wants to place to the order from
+          allOf:
+            - $ref: "#/components/schemas/Provider"
+        item:
+          description: Details of the item that the consumer wants to order
+          allOf:
+            - $ref: "#/components/schemas/Item"
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/TagGroup"
+    Provider:
+      description: Describes the catalog of a business.
+      type: object
+      properties:
+        id:
+          type: string
+          description: Id of the provider
+    Item:
+      description: >-
+        Describes a product or a service offered to the end consumer by the
+        provider. In the mobility sector, it can represent a fare product like one
+        way journey. In the logistics sector, it can represent the delivery service
+        offering. In the retail domain it can represent a product like a grocery
+        item.
+      type: object
+      properties:
+        id:
+          description: ID of the item.
+          type: string

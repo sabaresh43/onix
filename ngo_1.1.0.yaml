@@ -856,8 +856,7 @@ components:
       description: "Describes the products or services offered by a BPP. This is typically sent as the response to a search intent from a BAP. The payment terms, offers and terms of fulfillment supported by the BPP can also be included here. The BPP can show hierarchical nature of products/services in its catalog using the parent_category_id in categories. The BPP can also send a ttl (time to live) in the context which is the duration for which a BAP can cache the catalog and use the cached catalog.  <br>This has properties like bbp/descriptor,bbp/categories,bbp/fulfillments,bbp/payments,bbp/offers,bbp/providers and exp<br>This is used in the following situations.<br><ul><li>This is typically used in the discovery stage when the BPP sends the details of the products and services it offers as response to a search intent from the BAP. </li></ul>"
       type: object
       properties:
-        descriptor:
-          $ref: "#/components/schemas/Descriptor"
+  
         fulfillments:
           description: Fulfillment modes offered at the BPP level. This is used when a BPP itself offers fulfillments on behalf of the providers it has onboarded.
           type: array
@@ -877,13 +876,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Provider"
-        exp:
-          description: Timestamp after which catalog will expire
-          type: string
-          format: date-time
-        ttl:
-          description: Duration in seconds after which this catalog will expire
-          type: string
     Category:
       description: A label under which a collection of items can be grouped.
       type: object
@@ -938,12 +930,10 @@ components:
       properties:
         domain:
           description: Domain code that is relevant to this transaction context
-          allOf:
-            - $ref: "#/components/schemas/Domain/properties/code"
+          type: string
         location:
           description: The location where the transaction is intended to be fulfilled.
-          allOf:
-            - $ref: "#/components/schemas/Location"
+          type: string
         action:
           description: The Beckn protocol method being called by the sender and executed at the receiver.
           type: string
@@ -981,12 +971,6 @@ components:
           description: Time of request generation in RFC3339 format
           type: string
           format: date-time
-        key:
-          description: The encryption public key of the sender
-          type: string
-        ttl:
-          description: The duration in ISO8601 format after timestamp for which this message holds valid
-          type: string
     Country:
       description: Describes a country
       type: object
@@ -1209,10 +1193,6 @@ components:
       description: "The intent to buy or avail a product or a service. The BAP can declare the intent of the consumer containing <ul><li>What they want (A product, service, offer)</li><li>Who they want (A seller, service provider, agent etc)</li><li>Where they want it and where they want it from</li><li>When they want it (start and end time of fulfillment</li><li>How they want to pay for it</li></ul><br>This has properties like descriptor,provider,fulfillment,payment,category,offer,item,tags<br>This is typically used by the BAP to send the purpose of the user's search to the BPP. This will be used by the BPP to find products or services it offers that may match the user's intent.<br>For example, in ngo, the ngo consumer declares a ngo intent. In this case, the ngo consumer declares information that describes various aspects of their journey like,<ul><li>Where would they like to begin their journey (intent.fulfillment.start.location)</li><li>Where would they like to end their journey (intent.fulfillment.end.location)</li><li>When would they like to begin their journey (intent.fulfillment.start.time)</li><li>When would they like to end their journey (intent.fulfillment.end.time)</li><li>Who is the transport service provider they would like to avail services from (intent.provider)</li><li>Who is traveling (This is not recommended in public networks) (intent.fulfillment.customer)</li><li>What kind of fare product would they like to purchase (intent.item)</li><li>What add-on services would they like to avail</li><li>What offers would they like to apply on their booking (intent.offer)</li><li>What category of services would they like to avail (intent.category)</li><li>What additional luggage are they carrying</li><li>How would they like to pay for their journey (intent.payment)</li></ul><br>For example, in health domain, a consumer declares the intent for a lab booking the describes various aspects of their booking like,<ul><li>Where would they like to get their scan/test done (intent.fulfillment.start.location)</li><li>When would they like to get their scan/test done (intent.fulfillment.start.time)</li><li>When would they like to get the results of their test/scan (intent.fulfillment.end.time)</li><li>Who is the service provider they would like to avail services from (intent.provider)</li><li>Who is getting the test/scan (intent.fulfillment.customer)</li><li>What kind of test/scan would they like to purchase (intent.item)</li><li>What category of services would they like to avail (intent.category)</li><li>How would they like to pay for their journey (intent.payment)</li></ul>"
       type: object
       properties:
-        descriptor:
-          description: "A raw description of the search intent. Free text search strings, raw audio, etc can be sent in this object."
-          allOf:
-            - $ref: "#/components/schemas/Descriptor"
         provider:
           description: The provider from which the customer wants to place to the order from
           allOf:
@@ -1237,10 +1217,6 @@ components:
           description: Details of the item that the consumer wants to order
           allOf:
             - $ref: "#/components/schemas/Item"
-        tags:
-          type: array
-          items:
-            $ref: "#/components/schemas/TagGroup"
     ItemQuantity:
       description: Describes the count or amount of an item
       type: object
@@ -1824,14 +1800,6 @@ components:
         rateable:
           description: Whether this provider can be rated or not
           type: boolean
-        ttl:
-          description: "The time-to-live in seconds, for this object. This can be overriden at deeper levels. A value of -1 indicates that this object is not cacheable."
-          type: integer
-          minimum: -1
-        tags:
-          type: array
-          items:
-            $ref: "#/components/schemas/TagGroup"
     Quotation:
       description: "Describes a quote. It is the estimated price of products or services from the BPP.<br>This has properties like price, breakup, ttl"
       type: object

@@ -933,7 +933,8 @@ components:
           type: string
         location:
           description: The location where the transaction is intended to be fulfilled.
-          type: string
+          allOf:
+            - $ref: "#/components/schemas/Location"
         action:
           description: The Beckn protocol method being called by the sender and executed at the receiver.
           type: string
